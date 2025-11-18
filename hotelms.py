@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import sqlite3
@@ -8,7 +7,6 @@ import os
 
 DB_FILE = "hotel.db"
 
-# Try to import fpdf for PDF invoice creation; if not available we'll fallback to text invoice.
 try:
     from fpdf import FPDF
     FPDF_AVAILABLE = True
@@ -70,11 +68,9 @@ class HotelApp:
         nb = ttk.Notebook(self.root)
         nb.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
 
-        # --- Bookings tab ---
         tab_book = ttk.Frame(nb)
         nb.add(tab_book, text="Bookings")
 
-        # booking form
         frm = ttk.Frame(tab_book, padding=10)
         frm.pack(side=tk.TOP, fill=tk.X)
 
@@ -102,7 +98,6 @@ class HotelApp:
         ttk.Button(btn_frame, text="Export CSV", command=self.export_csv).grid(row=0, column=3, padx=6)
         ttk.Button(btn_frame, text="Generate Invoice (selected)", command=self.generate_invoice).grid(row=0, column=4, padx=6)
 
-        # search
         search_frame = ttk.LabelFrame(tab_book, text="Search", padding=8)
         search_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=6)
         ttk.Label(search_frame, text="Query (name or room)").pack(side=tk.LEFT, padx=6)
@@ -110,7 +105,6 @@ class HotelApp:
         ttk.Button(search_frame, text="Search", command=self.search_bookings).pack(side=tk.LEFT, padx=6)
         ttk.Button(search_frame, text="Clear Search", command=self.populate_booking_tree).pack(side=tk.LEFT, padx=6)
 
-        # bookings table
         tree_frame = ttk.Frame(tab_book); tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=6)
         columns = ("id", "guest_name", "room_no", "phone", "check_in", "check_out", "nights", "total", "created_at")
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", selectmode="browse")
@@ -132,7 +126,6 @@ class HotelApp:
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
         self.tree.bind("<Double-1>", self.on_tree_double_click)
 
-        # availability checker
         avail_frame = ttk.LabelFrame(tab_book, text="Availability Checker", padding=8)
         avail_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=6)
         ttk.Label(avail_frame, text="From (YYYY-MM-DD)").grid(row=0, column=0, padx=6, pady=4)
@@ -142,7 +135,6 @@ class HotelApp:
         ttk.Button(avail_frame, text="Check Available Rooms", command=self.check_availability).grid(row=0, column=4, padx=8)
         self.av_result = tk.StringVar(); ttk.Label(avail_frame, textvariable=self.av_result).grid(row=1, column=0, columnspan=6, sticky=tk.W, padx=6)
 
-        # --- Rooms tab ---
         tab_rooms = ttk.Frame(nb)
         nb.add(tab_rooms, text="Rooms")
 
@@ -161,8 +153,6 @@ class HotelApp:
         ttk.Button(room_btns, text="Update Selected Room", command=self.update_room).grid(row=0, column=1, padx=6)
         ttk.Button(room_btns, text="Delete Selected Room", command=self.delete_room).grid(row=0, column=2, padx=6)
         ttk.Button(room_btns, text="Refresh Rooms", command=self.populate_room_tree).grid(row=0, column=3, padx=6)
-
-        # rooms table
         rframe = ttk.Frame(tab_rooms); rframe.pack(fill=tk.BOTH, expand=True, padx=10, pady=6)
         rcols = ("id","room_no","room_type","rate","notes")
         self.room_tree = ttk.Treeview(rframe, columns=rcols, show="headings", selectmode="browse")
@@ -178,8 +168,6 @@ class HotelApp:
         rvsb.grid(row=0, column=1, sticky="ns"); rhsb.grid(row=1, column=0, sticky="ew")
         rframe.grid_rowconfigure(0, weight=1); rframe.grid_columnconfigure(0, weight=1)
         self.room_tree.bind("<<TreeviewSelect>>", self.on_room_select)
-
-        # status bar
         self.status_var = tk.StringVar(); self.status_var.set("Ready")
         ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W).pack(fill=tk.X, side=tk.BOTTOM)
 
@@ -220,7 +208,6 @@ class HotelApp:
         sel = self.room_tree.selection()
         if not sel: return
         vals = self.room_tree.item(sel[0], "values")
-        # populate form
         self.r_room_no.delete(0, tk.END); self.r_room_no.insert(0, vals[1])
         self.r_type.delete(0, tk.END); self.r_type.insert(0, vals[2])
         self.r_rate.delete(0, tk.END); self.r_rate.insert(0, vals[3])
@@ -242,7 +229,6 @@ class HotelApp:
         except ValueError:
             messagebox.showwarning("Validation", "Rate must be a number.")
             return
-        # update unique room_no might conflict - handle exception
         try:
             self.run_query("UPDATE rooms SET room_no=?, room_type=?, rate=?, notes=? WHERE id=?", (room_no, room_type, rate_f, notes, room_id), commit=True)
             self.status_var.set(f"Updated room {room_no}")
@@ -259,7 +245,6 @@ class HotelApp:
             return
         row = self.room_tree.item(sel[0], "values")
         room_id, room_no = row[0], row[1]
-        # check if bookings exist for that room
         linked = self.run_query("SELECT id FROM bookings WHERE room_no=?", (room_no,))
         if linked:
             if not messagebox.askyesno("Confirm delete", f"There are {len(linked)} bookings for room {room_no}. Delete anyway?"):
@@ -297,7 +282,6 @@ class HotelApp:
                     messagebox.showwarning("Validation", f"Date format should be YYYY-MM-DD: {d}")
                     return
 
-        # compute nights if both dates present
         nights = 0
         if check_in and check_out:
             dt_in = datetime.strptime(check_in, "%Y-%m-%d")
@@ -307,12 +291,10 @@ class HotelApp:
                 messagebox.showwarning("Validation", "Check-out must be after check-in.")
                 return
 
-        # check room exists and rate
         r = self.run_query("SELECT rate FROM rooms WHERE room_no=?", (room,))
         rate = float(r[0][0]) if r else 0.0
         total = nights * rate
-
-        # Check overlap bookings
+        
         if check_in and check_out:
             overlapping = self.run_query(
                 "SELECT id FROM bookings WHERE room_no = ? AND NOT (check_out <= ? OR check_in >= ?)",
@@ -349,7 +331,6 @@ class HotelApp:
         sel = self.tree.selection()
         if not sel: return
         vals = self.tree.item(sel[0], "values")
-        # populate fields
         self.entry_name.delete(0, tk.END); self.entry_name.insert(0, vals[1])
         self.room_var.set(vals[2])
         self.entry_phone.delete(0, tk.END); self.entry_phone.insert(0, vals[3])
@@ -392,8 +373,7 @@ class HotelApp:
         r = self.run_query("SELECT rate FROM rooms WHERE room_no=?", (room,))
         rate = float(r[0][0]) if r else 0.0
         total = nights * rate
-
-        # avoid overlapping with other bookings (exclude this booking)
+        
         if check_in and check_out:
             overlapping = self.run_query(
                 "SELECT id FROM bookings WHERE room_no = ? AND id != ? AND NOT (check_out <= ? OR check_in >= ?)",
@@ -471,7 +451,6 @@ class HotelApp:
         if datetime.strptime(to, "%Y-%m-%d") <= datetime.strptime(frm, "%Y-%m-%d"):
             messagebox.showwarning("Validation", "To date must be after From date.")
             return
-        # get all rooms
         rooms = [r[0] for r in self.run_query("SELECT room_no FROM rooms")]
         free_rooms = []
         for room in rooms:
@@ -498,7 +477,6 @@ class HotelApp:
     def generate_invoice(self):
         vals = self.get_selected_booking_row()
         if not vals: return
-        # vals mapping: id, guest_name, room_no, phone, check_in, check_out, nights, total, created_at
         booking = {
             "id": vals[0],
             "guest_name": vals[1],
@@ -510,12 +488,10 @@ class HotelApp:
             "total": vals[7] or 0.0,
             "created_at": vals[8]
         }
-        # get room rate & type
         r = self.run_query("SELECT room_type, rate FROM rooms WHERE room_no=?", (booking["room_no"],))
         room_type = r[0][0] if r else ""
         rate = float(r[0][1]) if r else 0.0
 
-        # ask save path
         default_name = f"invoice_booking_{booking['id']}.pdf" if FPDF_AVAILABLE else f"invoice_booking_{booking['id']}.txt"
         fpath = filedialog.asksaveasfilename(defaultextension=os.path.splitext(default_name)[1], initialfile=default_name, title="Save Invoice As")
         if not fpath:
@@ -542,8 +518,7 @@ class HotelApp:
                 pdf.cell(40, 8, f"Total: {float(booking['total']):.2f}", ln=True)
                 pdf.output(fpath)
             else:
-                # text fallback
-                with open(fpath, "w", encoding="utf-8") as f:
+                    with open(fpath, "w", encoding="utf-8") as f:
                     f.write("HOTEL INVOICE\n\n")
                     f.write(f"Invoice ID: {booking['id']}\n")
                     f.write(f"Guest: {booking['guest_name']}\n")
@@ -563,3 +538,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = HotelApp(root)
     root.mainloop()
+
